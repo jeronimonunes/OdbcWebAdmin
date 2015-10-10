@@ -1,0 +1,48 @@
+#header{
+	background-color:#204d74;
+	height: 40px;
+}
+
+#footer{
+	background-color:#204d74;
+	color:white;
+	height: 40px;
+}
+
+.pui-menu.pui-menubar {
+	background-color:inherit!important;
+	background-image:inherit!important;
+	border:none!important;
+}
+
+#header .pui-menu.ui-widget a {
+	color: white;
+}
+
+.pui-menu.pui-menubar .pui-menu-list .pui-menu-parent .pui-menu-child {
+	background: inherit;
+	background-color:#204d74;
+	border:none;
+}
+
+.pui-menuitem {
+	padding-left:1em !important;
+}
+
+#rightPanel {
+	height: 100%;
+	overflow: auto;
+}
+
+#leftPanel {
+	height: 100%;
+	overflow: auto;
+	border-right-color: #204d74;
+	border-right-style: solid;
+}
+
+#content {
+	height: 100%;
+	padding-top: 40px;
+	padding-bottom: 40px;
+}
