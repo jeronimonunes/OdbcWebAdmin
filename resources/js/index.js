@@ -1,31 +1,37 @@
+var odbc = {dsn:'',user:'',password:'',table:{selection:new Set()}};
+
 $(document).ready(function(){
 	$('#mb').puimenubar();
 });
 
-function getColumns(metadata){
+function getColumns(){
 	var columns = [];
-	metadata.forEach(function (data){
-		columns[columns.length] = {field:data.name,headerText:data.name,sortable:true};
+	odbc.table.selection.forEach(function (s){
+		columns[columns.length] = {field:s,headerText:s,sortable:true};
 	});
 	return columns;
 }
 
 function getMetadataColumns(metadata){
-	var columns = [];
-	columns[0] = {field:"selected",headerText:"Selected",sortable:false};
-	columns[1] = {field:"type",headerText:"Type",sortable:true};
-	columns[2] = {field:"name",headerText:"Name",sortable:true};
-	columns[3] = {field:"len",headerText:"Length",sortable:true};
-	columns[4] = {field:"precision",headerText:"Precision",sortable:true};
-	columns[5] = {field:"scale",headerText:"Scale",sortable:true};
-	return columns;
+	return [
+		{field:"type",headerText:"Type",sortable:true},
+		{field:"name",headerText:"Name",sortable:true},
+		{field:"len",headerText:"Length",sortable:true},
+		{field:"precision",headerText:"Precision",sortable:true},
+		{field:"scale",headerText:"Scale",sortable:true}
+	];
 }
 
-function getMetadataData(metadata){
-	return metadata;
+function getMetadataData(callback){
+	odbc.metadata = this;
+	callback.call(this,odbc.table.metadata);
+	this.tbody.find('tr').each(function(i,r){
+		odbc.metadata.selectRow($(r),false);
+	});
 }
 
 function getData(callback,ui){
+	odbc.data = this;
 	$.ajax({
 		type: 'post',
 		url: 'service/',
@@ -33,12 +39,13 @@ function getData(callback,ui){
 		context: this,
 		data: {
 			type: 'data',
-			table: this.options.dbtable,
+			table: odbc.table.name,
+			selection: Array.from(odbc.table.selection),
 			first: ui.first,
 			rows: this.options.paginator.rows,
-			dsn:'dsn',
-			user:'',
-			password:''
+			dsn:odbc.dsn,
+			user:odbc.user,
+			password:odbc.password
 		},
 		success: function(response) {
 			callback.call(this, response.data);
@@ -46,8 +53,9 @@ function getData(callback,ui){
 	});
 }
 
-function data(){
-	var t = $(this).text();
+function onTableSelect(){
+	odbc.table.name = $(this).text();
+	odbc.table.selection = new Set();
 	var r = $("#rightPanel");
 	r.children().remove();
 	var m = $("<div id='metadata'>").appendTo(r);
@@ -57,34 +65,49 @@ function data(){
 		url: 'service/',
 		dataType: 'json',
 		data: {
-			dsn:'dsn',
+			dsn:odbc.dsn,
 			type: 'metadata',
-			table: t,
-			user:'',
-			password:''
+			table: odbc.table.name,
+			user:odbc.user,
+			password:odbc.password
 		},
 		success: function(response) {
-			d.puidatatable({
-				dbtable: t,
-				lazy: true,
-				caption: 'Dados da tabela',
-				paginator: {
-					rows: 5,
-					totalRecords: response.totalRecords
-				},
-				columns: getColumns(response.metadata),
-				datasource: getData
-			});
+			odbc.table.metadata = response.metadata;
+			odbc.table.totalRecords = response.totalRecords;
 			m.puidatatable({
-				dbtable: t,
 				caption: 'Metadados da tabela',
 				paginator: {
 					rows: 5,
 				},
-				columns: getMetadataColumns(response.metadata),
-				datasource: getMetadataData(response.metadata)
+				columns: getMetadataColumns(odbc.table.metadata),
+				datasource: getMetadataData,
+				selectionMode: 'multiple',
+				keepSelectionInLazyMode: true,
+				rowSelect: function(event,data){
+					if(typeof(data.name)=='string'&&data.name.length>0) odbc.table.selection.add(data.name);
+					createDataTable();
+				},
+				rowUnselect: function(event,data){
+					odbc.table.selection.delete(data.name);
+					createDataTable();
+				}
 			});
 		}
+	});
+}
+
+function createDataTable(){
+	$('#data').remove();
+	var d = $("<div id='data'>").appendTo($("#rightPanel"));
+	d.puidatatable({
+		caption: 'Dados da tabela',
+		lazy: true,
+		paginator: {
+			rows: 5,
+			totalRecords: odbc.table.totalRecords
+		},
+		columns: getColumns(),
+		datasource: getData
 	});
 }
 
@@ -96,18 +119,28 @@ function tables(){
 		url: 'service/',
 		dataType: 'json',
 		data: {
-			dsn:'dsn',
+			dsn:odbc.dsn,
 			type: 'tables',
-			user:'',
-			password:''
+			user:odbc.user,
+			password:odbc.password
 		},
 		success: function(response) {
 			var t = $("<ul id='tables'>");
 			response.data.forEach(function(i){
-				$("<a data-icon='fa-download'>").text(i.TABLENAME).on("click",data).appendTo($("<li>").appendTo(t));
+				if(i.TYPENAME=="TABLE"||i.TABLE_TYPE=="TABLE"){
+					if(typeof(i.TABLE_NAME)=='string'&&i.TABLE_NAME!=""){
+						$("<a data-icon='fa-table'>").text(i.TABLE_NAME).on("click",onTableSelect).appendTo($("<li>").appendTo(t));
+					} else if(typeof(i.TABLENAME)=='string'&&i.TABLENAME!=""){
+						$("<a data-icon='fa-table'>").text(i.TABLENAME).on("click",onTableSelect).appendTo($("<li>").appendTo(t));
+					}
+				}
 			});	
 			t.appendTo(l);
 			t.puimenu();
 		}
 	});
+}
+
+function _export(){
+	//TODO
 }

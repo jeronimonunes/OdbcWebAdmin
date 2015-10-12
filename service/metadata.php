@@ -25,7 +25,12 @@
 			else echo("}");
 		}
 		echo("],");
-		echo("\"totalRecords\":".odbc_num_rows($result).",");
+		$result = odbc_exec($connection, Grammar::count($_POST["table"]));
+		if($result && odbc_fetch_row($result)) {
+			echo("\"totalRecords\":".odbc_result($result, 1).",");
+		} else {
+			$status = "Error while trying to count records";
+		}
 		$status = "ok";
 	} else {
 		$status = "Table required";

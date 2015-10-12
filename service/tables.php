@@ -14,7 +14,8 @@
 		}
 		while($data) {
 			echo(json_encode($data));
-			if( !(isset($max) && ++$j >= $max) ){
+			$j++;
+			if( !(isset($max) && $j >= $max) ){
 				$data = odbc_fetch_array($result);
 			} else {
 				$data = false;
